@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>WS Proto Test</title>
+</head>
+<body>
+</body>
+<script>
+const server = new WebSocket("ws://localhost:3000/chat");
+
+server.on("open",() => {
+ console.log("Server is listening...");
+});
+</script>
+</html>
