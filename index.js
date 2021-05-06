@@ -11,14 +11,6 @@ const CURRENT_CLIENTS = [];
 
 const server = net.createServer((connection) => {
 
-connection.on("error",() => {
- console.log("\x1b[31m%s\x1b","TRANSMISSION ERROR OCURRED! CLIENT_SOCKET: " + connection.remoteAddress); 
-})
-
-connection.on("close",() => {
-console.log("\x1b[33m%s\x1b[0m","Client " + connection.remoteAddress + "has disconnected!");
-});
-
  connection.on("data",(data) => {
      if (!CURRENT_CLIENTS.includes(connection.remoteAddress)) {
   let request = data.toString();
@@ -30,7 +22,6 @@ console.log("\x1b[33m%s\x1b[0m","Client " + connection.remoteAddress + "has disc
   let headers = {};
 
  const hdrs = lines.filter((h) => { return h.length > 1 });
-
   for (let i of hdrs) {
     let hdr = i.split(": ");
     headers[hdr[0]] = hdr[1];
@@ -65,6 +56,15 @@ console.log("\x1b[33m%s\x1b[0m","Client " + connection.remoteAddress + "has disc
 
 }
  });
+
+connection.on("error",() => {
+ console.log("\x1b[31m%s\x1b","TRANSMISSION ERROR OCURRED! CLIENT_SOCKET: " + connection.remoteAddress); 
+})
+
+connection.on("close",() => {
+console.log("\x1b[33m%s\x1b[0m","Client " + connection.remoteAddress + "has disconnected!");
+});
+
 });
 
 
