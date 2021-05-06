@@ -2,14 +2,26 @@
 <html>
 <head>
 <title>WS Proto Test</title>
+<link rel="icon" href="http://wefefw:3000/wefwef">
 </head>
 <body>
 </body>
-<script>
+<script type="text/javascript">
+
 const server = new WebSocket("ws://localhost:3000/chat");
 
-server.on("open",() => {
- console.log("Server is listening...");
+server.addEventListener("open",() => {
+ document.write("Server is listening!");
+ server.send("Hello there!");
 });
+
+server.addEventListener("error",() => {
+ document.write("An error has ocurred!");
+});
+
+setTimeout(() => {
+document.write(server.readyState);
+},3000);
+
 </script>
 </html>
