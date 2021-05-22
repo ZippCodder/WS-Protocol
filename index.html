@@ -3,25 +3,89 @@
 <head>
 <title>WS Proto Test</title>
 <link rel="icon" href="http://wefefw:3000/wefwef">
+<style>
+ canvas {
+border: solid;
+}
+
+#receiver {
+border: solid blue;
+}
+</style>
 </head>
 <body>
+<p>Connecting to server...</p>
+<p id="length"></p>
+<canvas id="receiver">Sorry, your browser dosen't have support for HTML Canvas!</canvas>
+<button onclick="transmit()">Stream Video</button>
 </body>
 <script type="text/javascript">
 
 const server = new WebSocket("ws://localhost:3000/chat");
+const canvas = document.querySelector("#receiver");
+canvas.width = 50;
+canvas.height = 50;
+const ctx = canvas.getContext("2d");
+const message = document.querySelector("p");
+const length = document.querySelector("#length");
+
+let connected = false;
+let transmiter = document.createElement("canvas");
+transmiter.width = 50;
+transmiter.height = 50;
+document.body.appendChild(transmiter); 
+let tctx = transmiter.getContext("2d");
 
 server.addEventListener("open",() => {
- document.write("Server is listening!");
- server.send("Hello there!");
+ message.innerText = "Connected";
+ connected = true;
 });
 
-server.addEventListener("error",() => {
- document.write("An error has ocurred!");
+server.addEventListener("error",(err) => {
+ document.write("A NETWORK ERROR OCURRED");
 });
 
-setTimeout(() => {
-document.write(server.readyState);
-},3000);
+server.addEventListener("close",(e) => {
+document.write(" CONNECTION WAS CLOSED: " + e.code);
+});
+
+server.addEventListener("message", async (e) => {
+try {
+let data = await e.data.arrayBuffer();
+let img = new ImageData(new Uint8ClampedArray(data),50,50);
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.putImageData(img,0,0);
+} catch (err) {
+ document.write("ERROR: " + err);
+}
+}); 
+
+function transmit() {
+try {
+if (connected) {
+ navigator.mediaDevices.getUserMedia({video: {width: 50, height: 50}}).then(stream => {
+  let video = document.createElement("video");
+   document.body.appendChild(video);
+   function drawFrame() {
+     tctx.drawImage(video,0,0);
+     let data = new Uint8Array(tctx.getImageData(0,0,canvas.width,canvas.height).data.buffer);
+      server.send(data);
+      requestAnimationFrame(drawFrame);
+    }
+
+    video.srcObject = stream;
+   video.addEventListener("canplay",() => {
+    requestAnimationFrame(drawFrame);
+});
+video.play();
+}).catch(err => {
+message.innerText = "AN ERROR OCURRED! " + err;
+});
+}
+} catch (err) {
+document.write(err);
+}
+}
 
 </script>
 </html>

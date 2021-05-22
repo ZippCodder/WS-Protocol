@@ -1,2 +1,2 @@
 # WS-Protocol
-Wsprotocol testing
+A websocket protocol implementation
