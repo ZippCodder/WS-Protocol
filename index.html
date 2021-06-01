@@ -3,25 +3,84 @@
 <head>
 <title>WS Proto Test</title>
 <link rel="icon" href="http://wefefw:3000/wefwef">
+<style>
+video, canvas {
+border: solid;
+}
+
+#trans {
+border-color: blue;
+}
+
+#rece {
+border-color: red;
+}
+</style>
 </head>
 <body>
+<p id="message">Connecting...</p>
+<canvas id="trans"></canvas>
+<canvas id="rece"></canvas>
+<button onclick="transmit()">Stream</button>
 </body>
 <script type="text/javascript">
 
-const server = new WebSocket("ws://localhost:3000/chat");
+// const username = prompt("Choose a username!");
+const server = new WebSocket("ws://localhost:3000/chat?username=Randall");
+const transmitter = document.querySelector("#trans");
+const tctx = transmitter.getContext("2d");
+tctx.width = 100;
+tctx.height = 100;
+const receiver = document.querySelector("#rece");
+const rctx = receiver.getContext("2d");
+rctx.width = tctx.width;
+rctx.height = tctx.height;
+let connected = false;
+
+function transmit() {
+if (connected) {
+try {
+navigator.mediaDevices.getUserMedia({audio: false, video: { width: tctx.width, height: tctx }}).then(stream => {
+ const video = document.createElement("video");
+ video.srcObject = stream;
+ document.body.appendChild(video);
+
+  function drawFrame() {
+  tctx.clearRect(0,0,tctx.width,tctx.height);
+  tctx.drawImage(video,0,0,tctx.width,tctx.height);
+  let frame = tctx.getImageData(0,0,tctx.width,tctx.height).data;
+  frame = frame.buffer;
+  server.send(frame);
+}
+
+ video.play();
+setInterval(drawFrame,100);
+}).catch((err) => {
+message.innerText = "Camera access rejected! " + err;
+});
+} catch (err) {
+message.innerText = "A client error ocurred!: " + err;
+}
+}
+}
+
+server.addEventListener("message",(data) => {
+document.write(data.length);
+});
 
 server.addEventListener("open",() => {
- document.write("Server is listening!");
- server.send("Hello there!");
+ message.innerText = "Connected";
+ connected = true;
+server.send(new Uint8Array([104,101,108,108,111]));
 });
 
-server.addEventListener("error",() => {
- document.write("An error has ocurred!");
+server.addEventListener("error",(err) => {
+ message.innerText = "TRANSMISSION ERROR: " + err;
 });
 
-setTimeout(() => {
-document.write(server.readyState);
-},3000);
+server.addEventListener("close",(err) => {
+ message.innerText = "CONNECTION WAS CLOSED: " + err.code;
+});
 
 </script>
 </html>
