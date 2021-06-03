@@ -74,10 +74,17 @@ parseMessage(data,connection._id);
 
 connection.on("close",() => {
 if (connection._id) console.log("\x1b[33m%s\x1b[0m",`Client ${connection._id} has disconnected!`);
+if (CONNECTED_CLIENTS[connection._id]) {
+delete CONNECTED_CLIENTS[connection._id];
+}
 });
 
 connection.on("error",(err) => {
  console.log("\x1b[31m%s\x1b","TRANSMISSION ERROR OCURRED! CLIENT_SOCKET: " + connection._id + " " + err); 
+ if (CONNECTED_CLIENTS[connection._id]) {
+delete CONNECTED_CLIENTS[connection._id];
+}
+ throw err;
 })
 });
 
@@ -86,9 +93,15 @@ connection.on("error",(err) => {
 
 function parseMessage(message,clientId) {
 let data = new Uint8Array(message);
+if (data.length !== 64524) return;
 let _first_byte = data[0].toString(2);
 let _second_byte = data[1].toString(2);
 let code = parseInt(_first_byte.slice(4),2);
+
+if (code == 8) {
+delete CONNECTED_CLIENTS[clientId];
+return;
+}
 
 if (code == 0 || code == 2) {
 let frame = {
@@ -103,7 +116,7 @@ RANGES: [data.slice(2,4),data.slice(2,10)]
 };
 
 let len = parseInt(frame._second_byte.slice(1),2);
-frame.LENGTHS = [len,parseInt(data[2].toString(2) + data[3].toString(2),2),parseInt(data.slice(2,10).reduce((a,v) => { return a+v.toString(2) },""),2)];
+frame.LENGTHS = [len,parseInt(bite(data[2].toString(2)) + bite(data[3].toString(2)),2),parseInt(data.slice(2,10).reduce((a,v) => { return a+bite(v.toString(2)) },""),2)];
 if (len <= 125) {
 frame.PAYLOAD_LENGTH = len;
 frame.MASK_KEY = data.slice(2,6);
@@ -118,12 +131,13 @@ frame.MASK_KEY = data.slice(10,14);
 frame.PAYLOAD = data.slice(14,14+frame.PAYLOAD_LENGTH-1);
 }
 
-if (frame.COMPRESSED) {
+if (frame.COMPRESSED && frame.OPCODE == 2) {
 gunzip(frame.PAYLOAD,(err,buffer) => {
  if (!err) {
  frame.PAYLOAD = new Uint8Array(buffer);
 } else {
-console.log(err);
+console.log("PROBLEM FRAME: ", frame);
+throw err;
 }
 });
 }

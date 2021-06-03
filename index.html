@@ -4,8 +4,15 @@
 <title>WS Proto Test</title>
 <link rel="icon" href="http://wefefw:3000/wefwef">
 <style>
+
+html,body {
+margin: 0;
+padding: 0;
+}
+
 video, canvas {
 border: solid;
+z-index: 0;
 }
 
 #trans {
@@ -13,6 +20,7 @@ border-color: blue;
 }
 
 #rece {
+width: 100%;
 border-color: red;
 }
 </style>
@@ -28,27 +36,29 @@ border-color: red;
 // const username = prompt("Choose a username!");
 const server = new WebSocket("ws://localhost:3000/chat?username=Randall");
 const transmitter = document.querySelector("#trans");
+transmitter.style.display = "none";
 const tctx = transmitter.getContext("2d");
-tctx.width = 100;
-tctx.height = 100;
+let width = 127, height = 127;
+transmitter.width = width;
+transmitter.height = height;
 const receiver = document.querySelector("#rece");
 const rctx = receiver.getContext("2d");
-rctx.width = tctx.width;
-rctx.height = tctx.height;
+receiver.width = width;
+receiver.height = height;
 let connected = false;
 
 function transmit() {
 if (connected) {
 try {
-navigator.mediaDevices.getUserMedia({audio: false, video: { width: tctx.width, height: tctx }}).then(stream => {
+navigator.mediaDevices.getUserMedia({audio: false, video: { width: width, height: height }}).then(stream => {
  const video = document.createElement("video");
  video.srcObject = stream;
  document.body.appendChild(video);
 
   function drawFrame() {
-  tctx.clearRect(0,0,tctx.width,tctx.height);
-  tctx.drawImage(video,0,0,tctx.width,tctx.height);
-  let frame = tctx.getImageData(0,0,tctx.width,tctx.height).data;
+  tctx.clearRect(0,0,width,height);
+  tctx.drawImage(video,0,0,width,height);
+  let frame = tctx.getImageData(0,0,width,height).data;
   frame = frame.buffer;
   server.send(frame);
 }
@@ -64,14 +74,19 @@ message.innerText = "A client error ocurred!: " + err;
 }
 }
 
-server.addEventListener("message",(data) => {
-document.write(data.length);
+server.addEventListener("message",(frame) => {
+if (frame.data.size == width*height*4) {
+frame.data.arrayBuffer().then(buffer => {
+let data = new ImageData(new Uint8ClampedArray(buffer),width,height);
+rctx.clearRect(0,0,width,height);
+rctx.putImageData(data,0,0);
+}).catch(err => document.write("A CLIENT ERROR OCURRED: " + err));
+} 
 });
 
 server.addEventListener("open",() => {
  message.innerText = "Connected";
  connected = true;
-server.send(new Uint8Array([104,101,108,108,111]));
 });
 
 server.addEventListener("error",(err) => {
